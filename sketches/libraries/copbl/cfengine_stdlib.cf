@@ -987,6 +987,7 @@ useshell => "true";
 body contain in_shell_bg
 {
 useshell => "true";
+#background => "true";
 }
 
 ##
@@ -3184,7 +3185,6 @@ commands:
 
   reload::
     "$(reloadcommand[$(service)])" -> { "@(stakeholders[$(service)])" }
-
             comment => "Execute command to reload the $(service) service";
 }
 

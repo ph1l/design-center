@@ -1,4 +1,4 @@
-PWD:=$(shell pwd)
+PpiWD:=$(shell pwd)
 SOURCEDIR:=$(PWD)/../../sketches
 
 CFPATH:=$(dirname $(which cf-agent))
@@ -585,6 +585,101 @@ access:
 data_classes:
 	$(CFSKETCH_DA) --install Data::Classes --activate Data::Classes=$(SOURCEDIR)/utilities/data_classes/params/demo.json
 	$(RUNNER)
+
+#
+
+iptables_filter:
+	$(CFSKETCH_DA) --install System::IPTables::Filter --activate System::IPTables::Filter=$(SOURCEDIR)/security/iptables/filter/params/demo.json
+	$(RUNNER)
+
+gencert:
+	$(CFSKETCH_DA) --install Utilities::OpenSSL::GenCert --activate Utilities::OpenSSL::GenCert=$(SOURCEDIR)/utilities/openssl/gencert/params/demo.json
+	$(RUNNER)
+
+ntp_client:
+	$(CFSKETCH_DA) --install Networking::NTP::Client --activate Networking::NTP::Client=$(SOURCEDIR)/networking/ntp/client/params/demo.json
+	$(RUNNER)
+
+zabbix_agent:
+	$(CFSKETCH_DA) --install Applications::Zabbix::Agent --activate Applications::Zabbix::Agent=$(SOURCEDIR)/applications/zabbix/agent/params/demo.json
+	$(RUNNER)
+
+memcached:
+	$(CFSKETCH_DA) --install Applications::Memcached --activate Applications::Memcached=$(SOURCEDIR)/applications/memcached/params/demo.json
+	$(RUNNER)
+
+redis:
+	$(CFSKETCH_DA) --install Applications::Redis --activate Applications::Redis=$(SOURCEDIR)/applications/redis/params/demo.json
+	$(RUNNER)
+
+sudoers:
+	$(CFSKETCH_DA) --install System::Sudoers --activate System::Sudoers=$(SOURCEDIR)/system/sudoers/params/demo.json
+	$(RUNNER)
+
+routes:
+	$(CFSKETCH_DA) --install System::Routes --activate System::Routes=$(SOURCEDIR)/system/routes/params/demo.json
+	$(RUNNER)
+
+syslog:
+	$(CFSKETCH_DA) --install System::Syslog --activate System::Syslog=$(SOURCEDIR)/system/syslog/params/solaris.json
+	$(RUNNER)
+
+logrotate:
+	$(CFSKETCH_DA) --install System::Logrotate --activate System::Logrotate=$(SOURCEDIR)/system/logrotate/params/ubuntu_12.json
+	$(RUNNER)
+
+#
+#
+#
+
+compose1:
+	$(CFSKETCH_DA) --install Test::Compose1 --activate Test::Compose1=$(SOURCEDIR)/test/compose1/params/demo.json
+	$(RUNNER)
+
+compose2:
+	$(CFSKETCH_DA) --install Test::Compose2 --activate Test::Compose2=$(SOURCEDIR)/test/compose2/params/demo.json
+	$(RUNNER)
+
+compose3:
+	$(CFSKETCH_DA) --install Test::Compose3 --activate Test::Compose3=$(SOURCEDIR)/test/compose3/params/demo.json
+	$(RUNNER)
+
+compose4:
+	$(CFSKETCH_DA) --install Test::Compose4 --activate Test::Compose4=$(SOURCEDIR)/test/compose4/params/demo.json
+	$(RUNNER)
+
+compose_test:
+
+	@echo ...define testing run environment
+	echo '{ dc_api_version: "0.0.1", request: {define_environment: { "testing": { activated: true, test: true, verbose: true } } } }' | $(CFAPI)
+	@echo ...deactivate all activations
+	echo '{ dc_api_version: "0.0.1", request: {deactivate: true } }' | $(CFAPI)
+	@echo ...valid request to uninstall CFEngine::stdlib
+	echo '{ dc_api_version: "0.0.1", request: {uninstall: [ { sketch: "CFEngine::stdlib", target: "$(API_SKETCHDIR)" } ] } }' | $(CFAPI)
+
+	@echo ...valid request to install CFEngine::sketch_template and VCS::vcs_mirror
+	echo '{ dc_api_version: "0.0.1", request: {install: [ { sketch: "Test::Compose1", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" }, { sketch: "Test::Compose2", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" } ] } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {install: [ { sketch: "Test::Compose2", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" }, { sketch: "Test::Compose2", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" } ] } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {install: [ { sketch: "Test::Compose3", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" }, { sketch: "Test::Compose2", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" } ] } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {install: [ { sketch: "Test::Compose4", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" }, { sketch: "Test::Compose2", force: true, target: "$(API_SKETCHDIR)", source: "$(SOURCEDIR)" } ] } }' | $(CFAPI)
+
+	
+	echo '{ dc_api_version: "0.0.1", request: {define: { "c1": { "Test::Compose1": { "p":"Compose1"}}}}} ' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {define: { "c2": { "Test::Compose2": { }}}}} ' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {define: { "c3": { "Test::Compose3": { }}}}} ' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {define: { "c4": { "Test::Compose4": { }}}}} ' | $(CFAPI)
+
+	@echo ...compose some sketch values in other sketches: sketch composition
+	echo '{ dc_api_version: "0.0.1", request: {compose: { "tc1": { "destination_sketch": "Test::Compose2", "destination_scalar": "p", "source_sketch": "Test::Compose1", "source_scalar": "return" } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {compose: { "tc2": { "destination_sketch": "Test::Compose3", "destination_scalar": "p", "source_sketch": "Test::Compose2", "source_scalar": "return" } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {compose: { "tc3": { "destination_sketch": "Test::Compose4", "destination_scalar": "p", "source_sketch": "Test::Compose3", "source_scalar": "return" } } } }' | $(CFAPI)
+
+	@echo ...activate VCS::vcs_mirror with testing run environment and vcs_base+git_mirror_core and vcs_base+svn_mirror_thrift parameters
+	echo '{ dc_api_version: "0.0.1", request: {activate: { "Test::Compose1": { target: "$(API_SKETCHDIR)", environment: "testing", params: [ "c1" ] } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {activate: { "Test::Compose2": { "compositions" : [ "tc1" ], target: "$(API_SKETCHDIR)", environment: "testing", params: [ "c2" ] } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {activate: { "Test::Compose3": { "compositions" : [ "tc2" ], target: "$(API_SKETCHDIR)", environment: "testing", params: [ "c3" ] } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {activate: { "Test::Compose4": { "compositions" : [ "tc3" ], target: "$(API_SKETCHDIR)", environment: "testing", params: [ "c4" ] } } } }' | $(CFAPI)
+	echo '{ dc_api_version: "0.0.1", request: {regenerate: { } } }' | $(CFAPI)
 
 motd:
 	$(CFSKETCH_DA) --install System::motd --activate System::motd=$(SOURCEDIR)/system/motd/params/example.json
